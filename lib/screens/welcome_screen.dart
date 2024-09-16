@@ -1,4 +1,5 @@
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/screens/login_screen.dart';
 import 'package:flash_chat/screens/registration_screen.dart';
 import 'package:flash_chat/widgets/rounded_button.dart';
@@ -16,6 +17,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
   late Animation animation;
+  final _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -35,6 +37,14 @@ class WelcomeScreenState extends State<WelcomeScreen>
     controller.addListener(() {
       setState(() {});
     });
+
+    _checkIfAuthenticated();
+  }
+
+  _checkIfAuthenticated() {
+    if (_auth.currentUser != null) {
+      print('logged in already');
+    }
   }
 
   @override
