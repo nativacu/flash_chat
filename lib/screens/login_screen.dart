@@ -72,61 +72,65 @@ class LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: ModalProgressHUD(
         inAsyncCall: _showSpinner,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Hero(
-                tag: 'lightning',
-                child: SizedBox(
-                  height: 200.0,
-                  child: Image.asset('images/logo.png'),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200.0),
+                    child: Hero(
+                      tag: 'lightning',
+                      child: Image.asset('images/logo.png'),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: 48.0,
-              ),
-              TextField(
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.emailAddress,
-                controller: _emailController,
-                onChanged: (value) {
-                  setState(() {
-                    email = value;
-                  });
-                },
-                decoration: kTextFieldDecoration.copyWith(
-                  hintText: 'Enter your email.',
+                const SizedBox(
+                  height: 48.0,
                 ),
-              ),
-              const SizedBox(
-                height: 8.0,
-              ),
-              TextField(
-                textAlign: TextAlign.center,
-                obscureText: true,
-                onChanged: (value) {
-                  setState(() {
-                    password = value;
-                  });
-                },
-                decoration: kTextFieldDecoration.copyWith(
-                  hintText: 'Enter your password.',
+                TextField(
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.emailAddress,
+                  controller: _emailController,
+                  onChanged: (value) {
+                    setState(() {
+                      email = value;
+                    });
+                  },
+                  decoration: kTextFieldDecoration.copyWith(
+                    hintText: 'Enter your email.',
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: 24.0,
-              ),
-              RoundedButton(
-                buttonColor: Colors.lightBlueAccent,
-                buttonText: 'Log In',
-                onPressed: () async {
-                  await onLogin();
-                },
-              ),
-            ],
+                const SizedBox(
+                  height: 8.0,
+                ),
+                TextField(
+                  textAlign: TextAlign.center,
+                  obscureText: true,
+                  onChanged: (value) {
+                    setState(() {
+                      password = value;
+                    });
+                  },
+                  decoration: kTextFieldDecoration.copyWith(
+                    hintText: 'Enter your password.',
+                  ),
+                ),
+                const SizedBox(
+                  height: 24.0,
+                ),
+                RoundedButton(
+                  buttonColor: Colors.lightBlueAccent,
+                  buttonText: 'Log In',
+                  onPressed: () async {
+                    await onLogin();
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
