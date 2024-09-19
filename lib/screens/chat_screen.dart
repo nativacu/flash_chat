@@ -1,10 +1,58 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_chat/constants.dart';
+import 'package:flash_chat/screens/welcome_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 final _fireStore = FirebaseFirestore.instance;
+User? loggedInUser;
+
+Map<String, Color> bubbleColors = {};
+final Set<Color> _usedColors = {Colors.lightBlueAccent};
+
+void _initBubbleColors() {
+  String userEmail = loggedInUser?.email ?? '';
+  bubbleColors.clear();
+  _usedColors.clear();
+  bubbleColors[userEmail] = Colors.lightBlueAccent;
+}
+
+MapEntry<String, Color> getSenderEntry(String email) {
+  Color color = bubbleColors[email] ?? generateUniqueColor();
+  bubbleColors[email] = color;
+  return MapEntry(email, color);
+}
+
+Color generateUniqueColor() {
+  Color newColor;
+
+  do {
+    newColor = _randomPastelColor();
+  } while (_usedColors.contains(newColor) ||
+      !_hasSufficientContrast(newColor) ||
+      newColor == Colors.lightBlueAccent);
+
+  _usedColors.add(newColor);
+  return newColor;
+}
+
+Color _randomPastelColor() {
+  Random random = Random();
+  int r = random.nextInt(116) + 150; // 150 to 255
+  int g = random.nextInt(116) + 150; // 150 to 255
+  int b = random.nextInt(116) + 150; // 150 to 255
+
+  return Color.fromARGB(255, r, g, b);
+}
+
+// Check if color has enough contrast with white (using the luminance difference)
+bool _hasSufficientContrast(Color color) {
+  double luminance = color.computeLuminance();
+  return luminance < 0.7; // Ensures contrast with white (1.0 is white)
+}
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -18,7 +66,6 @@ class ChatScreenState extends State<ChatScreen> {
   final _auth = FirebaseAuth.instance;
   final _messageTextController = TextEditingController();
 
-  User? loggedInUser;
   late String messageText;
 
   @override
@@ -31,18 +78,26 @@ class ChatScreenState extends State<ChatScreen> {
     final user = _auth.currentUser;
     if (user != null) {
       loggedInUser = user;
+      _initBubbleColors();
     }
   }
 
   Future<void> onLogout() async {
     try {
       await _auth.signOut();
-      Navigator.pop(context);
+      _redirectToHome();
     } catch (e) {
       if (kDebugMode) {
         print(e);
       }
     }
+  }
+
+  void _redirectToHome() {
+    Navigator.pushReplacementNamed(
+      context,
+      WelcomeScreen.id,
+    );
   }
 
   Future<void> onSend() async {
@@ -123,8 +178,6 @@ class MessagesStream extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _fireStore.collection('messages').snapshots(),
       builder: (context, snapshot) {
-        List<MessageBubble> messageBubbles = [];
-
         if (!snapshot.hasData) {
           return const Center(
             child: CircularProgressIndicator(
@@ -133,18 +186,24 @@ class MessagesStream extends StatelessWidget {
           );
         }
 
-        for (var doc in snapshot.data!.docs) {
+        final messages = snapshot.data!.docs.reversed;
+        List<MessageBubble> messageBubbles = [];
+
+        for (var doc in messages) {
           Map<String, dynamic> data = doc.data();
+          String senderEmail = data['sender'];
           messageBubbles.add(
             MessageBubble(
               text: data['text'],
-              sender: data['sender'],
+              sender: getSenderEntry(senderEmail),
+              isMe: loggedInUser?.email == senderEmail,
             ),
           );
         }
 
         return Expanded(
           child: ListView(
+            reverse: true,
             padding: const EdgeInsets.symmetric(
               horizontal: 10.0,
               vertical: 20.0,
@@ -158,22 +217,29 @@ class MessagesStream extends StatelessWidget {
 }
 
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({super.key, required this.sender, required this.text});
+  const MessageBubble({
+    super.key,
+    required this.sender,
+    required this.text,
+    required this.isMe,
+  });
 
-  final String sender;
+  final MapEntry<String, Color> sender;
   final String text;
+  final bool isMe;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(4.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Text(
-              sender,
+              sender.key,
               style: const TextStyle(
                 fontSize: 12.0,
                 color: Colors.black54,
@@ -181,9 +247,14 @@ class MessageBubble extends StatelessWidget {
             ),
           ),
           Material(
-            color: Colors.lightBlueAccent,
+            color: sender.value,
             elevation: 2.0,
-            borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+            borderRadius: BorderRadius.only(
+              bottomLeft: const Radius.circular(30.0),
+              topLeft: isMe ? const Radius.circular(30.0) : Radius.zero,
+              bottomRight: const Radius.circular(30.0),
+              topRight: isMe ? Radius.zero : const Radius.circular(30.0),
+            ),
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
